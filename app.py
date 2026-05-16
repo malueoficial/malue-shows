@@ -143,21 +143,39 @@ if not data.get("ok") or not data.get("url"):
     )
     st.stop()
 
-# Sucesso — redireciona via JS + meta refresh
+# Sucesso — redireciona via JS no top window (Streamlit roda dentro de iframe)
 dest = data["url"]
 spinner_placeholder.empty()
-st.markdown(
+
+# Usamos components.html pra rodar o JS no contexto certo e forçar redirect
+# na janela top (não no iframe do Streamlit).
+import streamlit.components.v1 as components
+components.html(
     f"""
-    <meta http-equiv="refresh" content="0;url={dest}">
-    <div class="malue-card">
-      <p class="malue-logo">MaLuê</p>
-      <div class="malue-spin"></div>
-      <p class="malue-sub">Abrindo…</p>
-      <p class="malue-help">
-        Se não abrir em 2s, <a href="{dest}">clique aqui</a>.
-      </p>
-    </div>
-    <script>window.location.replace({dest!r});</script>
+    <!doctype html><html><head>
+      <meta charset="utf-8">
+      <style>
+        body{{font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:40px;color:#666}}
+        .logo{{font-size:36px;font-weight:800;color:#222}}
+        .spin{{width:32px;height:32px;border:3px solid #eee;border-top-color:#222;border-radius:50%;animation:spin 1s linear infinite;margin:12px auto}}
+        @keyframes spin{{to{{transform:rotate(1turn)}}}}
+        a{{color:#444}}
+      </style>
+    </head><body>
+      <p class="logo">MaLuê</p>
+      <div class="spin"></div>
+      <p>Abrindo…</p>
+      <p><a id="link" href="{dest}" target="_top">Clique aqui se não abrir em 2s</a></p>
+      <script>
+        // Redireciona a janela top (fora do iframe do Streamlit)
+        try {{
+          window.top.location.href = {dest!r};
+        }} catch (e) {{
+          // Cross-origin: clique manual no link
+          document.getElementById('link').click();
+        }}
+      </script>
+    </body></html>
     """,
-    unsafe_allow_html=True,
+    height=300,
 )
