@@ -110,9 +110,12 @@ try:
         APPS_SCRIPT_URL,
         params={"action": "g", "type": tipo_param, "slug": slug},
         timeout=20,
-        allow_redirects=False,
+        allow_redirects=True,
     )
-    data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+    try:
+        data = resp.json()
+    except Exception:
+        data = {}
 except Exception:
     spinner_placeholder.empty()
     render_card(
