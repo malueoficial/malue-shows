@@ -84,11 +84,13 @@ if not tipo_param or not slug:
     render_card(
         """
         <div class="malue-err">
-          <strong>Link incompleto.</strong><br>
-          Esse endereço não tem informação suficiente pra abrir o documento.
+          <strong>Esse link precisa ser completo.</strong><br>
+          Você provavelmente clicou na imagem de preview do link no WhatsApp.
+          O preview joga fora a parte que diz qual documento abrir.
         </div>
         <p class="malue-help">
-          Se você veio aqui por um link da MaLuê, peça pra pessoa reenviar.
+          Volta pra conversa e <strong>toque no texto do link em azul</strong>
+          (a URL completa, não no card de preview).
         </p>
         """
     )
@@ -143,39 +145,47 @@ if not data.get("ok") or not data.get("url"):
     )
     st.stop()
 
-# Sucesso — redireciona via JS no top window (Streamlit roda dentro de iframe)
+# Sucesso — tenta redirect automático, mas o foco é o botão grande
+# (o iframe do Streamlit bloqueia window.top.location na maioria dos navegadores).
 dest = data["url"]
 spinner_placeholder.empty()
 
-# Usamos components.html pra rodar o JS no contexto certo e forçar redirect
-# na janela top (não no iframe do Streamlit).
 import streamlit.components.v1 as components
 components.html(
     f"""
     <!doctype html><html><head>
       <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
       <style>
-        body{{font-family:-apple-system,system-ui,sans-serif;text-align:center;padding:40px;color:#666}}
-        .logo{{font-size:36px;font-weight:800;color:#222}}
-        .spin{{width:32px;height:32px;border:3px solid #eee;border-top-color:#222;border-radius:50%;animation:spin 1s linear infinite;margin:12px auto}}
-        @keyframes spin{{to{{transform:rotate(1turn)}}}}
-        a{{color:#444}}
+        *{{box-sizing:border-box}}
+        body{{
+          font-family:-apple-system,system-ui,sans-serif;
+          text-align:center;padding:32px 20px;color:#222;margin:0;
+        }}
+        .logo{{font-size:38px;font-weight:800;letter-spacing:-.5px;margin:0 0 4px}}
+        .sub{{color:#888;font-size:14px;margin:0 0 28px}}
+        .btn{{
+          display:inline-block;background:#222;color:#fff !important;
+          padding:18px 38px;border-radius:14px;text-decoration:none;
+          font-size:17px;font-weight:700;
+          box-shadow:0 4px 14px rgba(0,0,0,.15);
+          transition:transform .15s;
+        }}
+        .btn:active{{transform:scale(.97)}}
+        .hint{{color:#888;font-size:13px;margin-top:20px;line-height:1.5}}
       </style>
     </head><body>
       <p class="logo">MaLuê</p>
-      <div class="spin"></div>
-      <p>Abrindo…</p>
-      <p><a id="link" href="{dest}" target="_top">Clique aqui se não abrir em 2s</a></p>
+      <p class="sub">🎶 música ao vivo</p>
+      <a id="link" class="btn" href="{dest}" target="_top" rel="noopener">
+        Abrir documento →
+      </a>
+      <p class="hint">Toque no botão acima pra ver tua proposta.</p>
       <script>
-        // Redireciona a janela top (fora do iframe do Streamlit)
-        try {{
-          window.top.location.href = {dest!r};
-        }} catch (e) {{
-          // Cross-origin: clique manual no link
-          document.getElementById('link').click();
-        }}
+        // Tenta redirect automático (vai falhar silenciosamente em iframes cross-origin)
+        try {{ window.top.location.href = {dest!r}; }} catch (e) {{}}
       </script>
     </body></html>
     """,
-    height=300,
+    height=320,
 )
